@@ -21,10 +21,47 @@ import shutil
 import subprocess
 from pathlib import Path
 
-# Configure stdout and stderr for UTF-8 on Windows
-if sys.platform == 'win32':
+# Provide robust file-backed stdout/stderr for PyInstaller windowed mode (console=False)
+class OutputLogger:
+    def __init__(self, log_path=None):
+        self.log_path = log_path
+        self.encoding = 'utf-8'
+
+    def write(self, message):
+        if not message:
+            return
+        if self.log_path:
+            try:
+                with open(self.log_path, 'a', encoding='utf-8', errors='replace') as f:
+                    f.write(message)
+            except Exception:
+                pass
+
+    def flush(self):
+        pass
+
+    def isatty(self):
+        return False
+
+log_dir = Path(os.environ.get('LOCALAPPDATA', '')) / 'NHGCC_Church_Database'
+try:
+    log_dir.mkdir(parents=True, exist_ok=True)
+    app_log_file = log_dir / 'desktop_runtime.log'
+except Exception:
+    app_log_file = None
+
+if sys.stdout is None:
+    sys.stdout = OutputLogger(app_log_file)
+else:
     try:
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+if sys.stderr is None:
+    sys.stderr = OutputLogger(app_log_file)
+else:
+    try:
         sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     except Exception:
         pass
