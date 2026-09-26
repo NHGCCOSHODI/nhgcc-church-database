@@ -30,10 +30,15 @@ def index():
     recent_sundays = get_recent_sundays(count=6, reference_date=today)
     recent_sundays.reverse()
     chart_labels = [s.strftime('%b %d') for s in recent_sundays]
-    chart_data = []
-    for s in recent_sundays:
-        cnt = Attendance.query.filter_by(service_date=s, status='Present').count()
-        chart_data.append(cnt)
+    
+    # Efficient bulk aggregation for recent Sunday attendances (1 query instead of 6)
+    att_counts_map = dict(
+        db.session.query(Attendance.service_date, func.count(Attendance.id))
+        .filter(Attendance.service_date.in_(recent_sundays), Attendance.status == 'Present')
+        .group_by(Attendance.service_date)
+        .all()
+    )
+    chart_data = [att_counts_map.get(s, 0) for s in recent_sundays]
 
     dept_query = db.session.query(Member.department, func.count(Member.id)).filter(Member.is_active == True).group_by(Member.department).all()
     dept_labels = [d[0] if d[0] else 'General' for d in dept_query]
