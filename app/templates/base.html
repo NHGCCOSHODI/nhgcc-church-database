@@ -14,8 +14,9 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- SIDEBAR -->
-    <aside class="app-sidebar">
+    <!-- SIDEBAR OVERLAY & SIDEBAR -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <aside class="app-sidebar" id="appSidebar">
         <div class="sidebar-brand">
             <img src="{{ url_for('static', filename='images/logo.png') }}" alt="NHGCC Logo">
             <div class="brand-text">
@@ -94,8 +95,8 @@
         <!-- TOP NAVBAR -->
         <header class="top-navbar">
             <div class="nav-left">
-                <button id="mobileMenuBtn" class="btn btn-outline btn-sm d-md-none" style="display: none;">
-                    <i class="bi bi-list fs-5"></i>
+                <button id="mobileMenuBtn" class="mobile-menu-btn" title="Toggle Menu" aria-label="Toggle navigation">
+                    <i class="bi bi-list"></i>
                 </button>
                 <div class="page-title">{% block header_title %}Admin Dashboard{% endblock %}</div>
                 <div class="service-badge">

@@ -46,6 +46,15 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Supabase cloud PostgreSQL connection resilience options:
+    # pool_pre_ping tests liveness before queries and automatically reconnects if dropped
+    # pool_recycle recycles connections every 280s to stay ahead of Supabase pooler idle timeouts
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
+        'pool_timeout': 30,
+    }
+
     CHURCH_NAME = os.environ.get('CHURCH_NAME', 'National Holy Ghost Church of Christ')
     CHURCH_BRANCH = os.environ.get('CHURCH_BRANCH', 'Oshodi Parish, Lagos')
     CHURCH_EMAIL = os.environ.get('CHURCH_EMAIL', 'nhgccoshodi@gmail.com')

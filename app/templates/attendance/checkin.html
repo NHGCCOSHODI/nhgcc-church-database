@@ -6,17 +6,17 @@
 {% block content %}
 <!-- HEADER ACTION AND STATS BAR -->
 <div class="checkin-header-bar">
-    <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+    <div class="checkin-controls">
         <!-- Date Selector -->
         <div>
             <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; display: block; margin-bottom: 4px;">Service Date</label>
-            <input type="date" id="serviceDate" value="{{ service_date_str }}" class="form-control" style="background: #ffffff; color: #0b192c; font-weight: 700; width: 170px;">
+            <input type="date" id="serviceDate" value="{{ service_date_str }}" class="form-control" style="background: #ffffff; color: #0b192c; font-weight: 700; min-width: 150px;">
         </div>
 
         <!-- Service Type Selector -->
         <div>
             <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; display: block; margin-bottom: 4px;">Service Type</label>
-            <select id="serviceType" class="form-control" style="background: #ffffff; color: #0b192c; font-weight: 700; width: 200px;">
+            <select id="serviceType" class="form-control" style="background: #ffffff; color: #0b192c; font-weight: 700; min-width: 170px;">
                 <option value="Sunday Service" {% if service_type == 'Sunday Service' %}selected{% endif %}>Sunday Service</option>
                 <option value="Sunday 1st Service" {% if service_type == 'Sunday 1st Service' %}selected{% endif %}>Sunday 1st Service</option>
                 <option value="Sunday 2nd Service" {% if service_type == 'Sunday 2nd Service' %}selected{% endif %}>Sunday 2nd Service</option>
@@ -28,7 +28,7 @@
 
         <!-- Quick Register Member Modal Trigger -->
         <div style="align-self: flex-end;">
-            <button id="openQuickAddBtn" class="btn btn-accent btn-lg" style="box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);">
+            <button id="openQuickAddBtn" class="btn btn-accent btn-lg">
                 <i class="bi bi-person-plus-fill"></i> + Quick Register Member
             </button>
         </div>

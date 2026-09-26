@@ -1,4 +1,4 @@
-// NHGCC Oshodi Main JavaScript
+// NHGCC Oshodi Main Application Scripts
 
 document.addEventListener('DOMContentLoaded', function () {
     // Auto-dismiss alert banners after 5 seconds
@@ -11,14 +11,46 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 5000);
     });
 
-    // Mobile sidebar toggle
+    // Mobile sidebar toggle & overlay handling
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const sidebar = document.querySelector('.app-sidebar');
-    if (mobileMenuBtn && sidebar) {
-        mobileMenuBtn.addEventListener('click', () => {
+    const sidebar = document.getElementById('appSidebar') || document.querySelector('.app-sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function toggleSidebar() {
+        if (sidebar) {
             sidebar.classList.toggle('open');
+            if (overlay) {
+                overlay.classList.toggle('active', sidebar.classList.contains('open'));
+            }
+        }
+    }
+
+    function closeSidebar() {
+        if (sidebar && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+        }
+    }
+
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleSidebar();
         });
     }
+
+    if (overlay) {
+        overlay.addEventListener('click', closeSidebar);
+    }
+
+    // Close on Escape key
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSidebar();
+        }
+    });
 
     // Live digital clock in header
     const clockElem = document.getElementById('liveClock');

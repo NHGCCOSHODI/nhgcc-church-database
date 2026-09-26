@@ -102,16 +102,35 @@ def get_consecutive_absentees(min_weeks=2, max_weeks=6, reference_date=None):
         }
 
     active_members = Member.query.filter_by(is_active=True).all()
-    absentees = []
+    if not active_members:
+        return {
+            'summary': {'total_absentees': 0, 'streak_2': 0, 'streak_3_plus': 0},
+            'absentees': []
+        }
 
-    for member in active_members:
-        # Get attendances for this member on these sundays
-        attendances = Attendance.query.filter(
-            Attendance.member_id == member.id,
-            Attendance.service_date.in_(sundays),
+    # Fetch all attendances for these sundays in ONE single bulk query
+    recent_attendances = Attendance.query.filter(
+        Attendance.service_date.in_(sundays),
+        Attendance.status == 'Present'
+    ).all()
+
+    attended_dates_by_member = {}
+    for a in recent_attendances:
+        attended_dates_by_member.setdefault(a.member_id, set()).add(a.service_date)
+
+    # Fetch max attended date for each member in ONE single aggregated query
+    last_dates = dict(
+        db.session.query(
+            Attendance.member_id,
+            func.max(Attendance.service_date)
+        ).filter(
             Attendance.status == 'Present'
-        ).all()
-        attended_dates = {a.service_date for a in attendances}
+        ).group_by(Attendance.member_id).all()
+    )
+
+    absentees = []
+    for member in active_members:
+        attended_dates = attended_dates_by_member.get(member.id, set())
 
         streak = 0
         missed_dates = []
@@ -123,12 +142,7 @@ def get_consecutive_absentees(min_weeks=2, max_weeks=6, reference_date=None):
                 break
 
         if streak >= min_weeks:
-            last_record = Attendance.query.filter(
-                Attendance.member_id == member.id,
-                Attendance.status == 'Present'
-            ).order_by(Attendance.service_date.desc()).first()
-            last_attended = last_record.service_date if last_record else None
-
+            last_attended = last_dates.get(member.id)
             absentees.append({
                 'member': member,
                 'streak': streak,
