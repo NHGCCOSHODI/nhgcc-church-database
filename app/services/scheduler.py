@@ -7,7 +7,7 @@ from app.services.notification_logic import get_birthdays_in_range, get_consecut
 from app.services.email_service import send_raw_email, generate_birthday_email_html, generate_absentee_email_html
 
 logger = logging.getLogger(__name__)
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(daemon=True)
 
 def trigger_birthday_check(app):
     """Checks for members whose birthday is within 7 days and dispatches email alert."""

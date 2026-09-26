@@ -16,8 +16,8 @@ load_dotenv(BASE_DIR / '.env')
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'nhgcc-oshodi-secure-key-2026-prod-desktop')
 
-    # Central Supabase PostgreSQL cloud database URL (shared across all installations)
-    DEFAULT_CLOUD_DB = 'postgresql+psycopg://postgres.xjvftjeaovleukhuhkpa:NHGCC_Church_Db_2026%21@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require'
+    # Central Supabase PostgreSQL cloud database URL (Transaction Mode on port 6543 for multi-client concurrency)
+    DEFAULT_CLOUD_DB = 'postgresql+psycopg://postgres.xjvftjeaovleukhuhkpa:NHGCC_Church_Db_2026%21@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require'
 
     raw_db_url = os.environ.get('DATABASE_URL', DEFAULT_CLOUD_DB)
     if raw_db_url:
@@ -25,6 +25,9 @@ class Config:
             raw_db_url = raw_db_url.replace('postgres://', 'postgresql+psycopg://', 1)
         elif raw_db_url.startswith('postgresql://') and not raw_db_url.startswith('postgresql+'):
             raw_db_url = raw_db_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+        # Ensure Transaction Mode port 6543 is used if connecting to Supabase pooler
+        if 'pooler.supabase.com:5432' in raw_db_url:
+            raw_db_url = raw_db_url.replace(':5432', ':6543')
         SQLALCHEMY_DATABASE_URI = raw_db_url
     elif os.environ.get('VERCEL') and sys.platform != 'win32':
         tmp_db = Path('/tmp/nhgcc_church.db')
@@ -47,12 +50,14 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Supabase cloud PostgreSQL connection resilience options:
-    # pool_pre_ping tests liveness before queries and automatically reconnects if dropped
-    # pool_recycle recycles connections every 280s to stay ahead of Supabase pooler idle timeouts
+    # NullPool ensures connections are immediately returned to Supabase's transaction pooler,
+    # preventing idle connection accumulation and EMAXCONNSESSION errors across multiple church PCs.
+    from sqlalchemy.pool import NullPool
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 280,
-        'pool_timeout': 30,
+        'poolclass': NullPool,
+        'connect_args': {
+            'connect_timeout': 10,
+        }
     }
 
     CHURCH_NAME = os.environ.get('CHURCH_NAME', 'National Holy Ghost Church of Christ')

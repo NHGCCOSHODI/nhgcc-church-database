@@ -29,6 +29,25 @@ def create_app(config_class=Config):
         print(f'[NHGCC Startup] Notice on seed db copy: {e}')
 
     app.config.from_object(config_class)
+
+    # Cloud connectivity probe: if cloud DB is specified but machine is offline, fall back gracefully to local SQLite
+    db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if 'supabase.com' in db_uri or 'postgres' in db_uri:
+        try:
+            from sqlalchemy import create_engine, text
+            from sqlalchemy.pool import NullPool
+            test_engine = create_engine(db_uri, poolclass=NullPool, connect_args={'connect_timeout': 5})
+            with test_engine.connect() as probe_conn:
+                probe_conn.execute(text('SELECT 1'))
+            print('[NHGCC Startup] Connected successfully to Supabase Cloud Database (Live Sync Active).')
+        except Exception as conn_err:
+            local_db_path = DATA_DIR / 'nhgcc_church.db'
+            if not local_db_path.exists():
+                local_db_path = BASE_DIR / 'nhgcc_church.db'
+            print(f'[NHGCC Startup] Cloud database unreachable ({conn_err}). Falling back to local offline database: {local_db_path}')
+            app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{local_db_path.as_posix()}'
+            app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {}
+
     db.init_app(app)
 
     from app.routes.dashboard import dashboard_bp
