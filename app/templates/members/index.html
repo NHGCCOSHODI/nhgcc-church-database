@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Members Directory • NHGCC Oshodi{% endblock %}
+{% block header_title %}Church Members Directory{% endblock %}
+
+{% block content %}
+<!-- FILTER & ACTION BAR -->
+<div class="card">
+    <div class="card-body" style="padding: 20px;">
+        <form method="GET" action="{{ url_for('members.index') }}">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end;">
+                <!-- Search -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 11px;">Search Name, Phone, Address, Code</label>
+                    <input type="text" name="q" value="{{ search_q }}" class="form-control" placeholder="Type to search...">
+                </div>
+
+                <!-- Department -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 11px;">Department</label>
+                    <select name="department" class="form-control">
+                        <option value="">All Units</option>
+                        {% for d in departments %}
+                            <option value="{{ d }}" {% if dept_filter == d %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 11px;">Status</label>
+                    <select name="status" class="form-control">
+                        <option value="">All Statuses</option>
+                        <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+                        <option value="First-Timer" {% if status_filter == 'First-Timer' %}selected{% endif %}>First-Timer</option>
+                        <option value="New Convert" {% if status_filter == 'New Convert' %}selected{% endif %}>New Convert</option>
+                        <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+
+                <!-- Gender -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 11px;">Gender</label>
+                    <select name="gender" class="form-control">
+                        <option value="">All Genders</option>
+                        <option value="Male" {% if gender_filter == 'Male' %}selected{% endif %}>Male</option>
+                        <option value="Female" {% if gender_filter == 'Female' %}selected{% endif %}>Female</option>
+                    </select>
+                </div>
+
+                <!-- Birthday Month -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 11px;">Birth Month</label>
+                    <select name="month" class="form-control">
+                        <option value="">All Months</option>
+                        <option value="1" {% if month_filter == '1' %}selected{% endif %}>January</option>
+                        <option value="2" {% if month_filter == '2' %}selected{% endif %}>February</option>
+                        <option value="3" {% if month_filter == '3' %}selected{% endif %}>March</option>
+                        <option value="4" {% if month_filter == '4' %}selected{% endif %}>April</option>
+                        <option value="5" {% if month_filter == '5' %}selected{% endif %}>May</option>
+                        <option value="6" {% if month_filter == '6' %}selected{% endif %}>June</option>
+                        <option value="7" {% if month_filter == '7' %}selected{% endif %}>July</option>
+                        <option value="8" {% if month_filter == '8' %}selected{% endif %}>August</option>
+                        <option value="9" {% if month_filter == '9' %}selected{% endif %}>September</option>
+                        <option value="10" {% if month_filter == '10' %}selected{% endif %}>October</option>
+                        <option value="11" {% if month_filter == '11' %}selected{% endif %}>November</option>
+                        <option value="12" {% if month_filter == '12' %}selected{% endif %}>December</option>
+                    </select>
+                </div>
+
+                <!-- Filter button -->
+                <div style="display: flex; gap: 6px;">
+                    <button type="submit" class="btn btn-primary btn-sm" style="padding: 10px 14px;">
+                        <i class="bi bi-funnel-fill"></i> Filter
+                    </button>
+                    {% if search_q or dept_filter or status_filter or gender_filter or month_filter %}
+                        <a href="{{ url_for('members.index') }}" class="btn btn-outline btn-sm" style="padding: 10px 14px;" title="Clear Filters">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MEMBERS TABLE CARD -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="bi bi-people-fill" style="color: #2563eb;"></i>
+            <span>Registered Members ({{ total_count }})</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('members.export_excel') }}" class="btn btn-outline btn-sm">
+                <i class="bi bi-file-earmark-excel-fill" style="color: #10b981;"></i> Export Directory Excel
+            </a>
+            <a href="{{ url_for('members.create') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-person-plus-fill"></i> + Add Member
+            </a>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Code</th>
+                        <th>Member Full Name</th>
+                        <th>Phone Number</th>
+                        <th>Email Address</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Birthday</th>
+                        <th class="text-center" style="width: 130px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in members %}
+                    <tr>
+                        <td style="font-weight: 700; color: #1e3e62;">{{ m.member_code or '—' }}</td>
+                        <td>
+                            <div style="font-weight: 700; color: #0f172a; font-size: 14px;">
+                                <a href="{{ url_for('members.profile', member_id=m.id) }}" style="color: inherit; text-decoration: none;">
+                                    {{ m.display_title_name }}
+                                </a>
+                            </div>
+                            <div style="font-size: 11.5px; color: #64748b;">
+                                {{ m.address or 'Address not registered' }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if m.phone %}
+                                <a href="tel:{{ m.phone }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">{{ m.phone }}</a>
+                            {% else %}
+                                <span style="color: #94a3b8;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if m.email %}
+                                <span style="font-size: 12.5px; color: #475569;">{{ m.email }}</span>
+                            {% else %}
+                                <span style="color: #94a3b8;">—</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge badge-gray">{{ m.department or 'Congregation' }}</span></td>
+                        <td>
+                            {% if m.status == 'First-Timer' %}
+                                <span class="badge badge-warning">First-Timer</span>
+                            {% elif m.status == 'New Convert' %}
+                                <span class="badge badge-gold">New Convert</span>
+                            {% else %}
+                                <span class="badge badge-blue">Active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if m.birth_month and m.birth_day %}
+                                <span class="badge badge-gold">{{ m.formatted_birthday }}</span>
+                            {% else %}
+                                <span style="color: #94a3b8; font-size: 12px;">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div style="display: flex; justify-content: center; gap: 6px;">
+                                <a href="{{ url_for('members.profile', member_id=m.id) }}" class="btn btn-outline btn-sm" title="View Profile">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('members.edit', member_id=m.id) }}" class="btn btn-outline btn-sm" title="Edit Member">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

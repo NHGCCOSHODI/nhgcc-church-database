@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard • NHGCC Oshodi Database{% endblock %}
+{% block header_title %}Executive Dashboard{% endblock %}
+
+{% block content %}
+<!-- QUICK NOTICE / GREETING BAR -->
+<div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 18px 24px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm);">
+    <div>
+        <h2 style="font-size: 18px; font-weight: 700; color: #0b192c; margin-bottom: 4px;">
+            Welcome to NHGCC Oshodi Church Portal 🕊️
+        </h2>
+        <p style="color: #64748b; font-size: 13px;">
+            Next Sunday Service: <strong>{{ upcoming_sunday.strftime('%A, %d %B %Y') }}</strong> • Latest Registered Sunday: <strong>{{ latest_sunday.strftime('%d %B %Y') }}</strong>
+        </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ url_for('attendance.checkin') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-door-open-fill"></i> Start Sunday Check-In
+        </a>
+    </div>
+</div>
+
+<!-- METRIC KPI CARDS -->
+<div class="metrics-grid">
+    <!-- Total Members -->
+    <div class="metric-card">
+        <div class="metric-info">
+            <p>Total Database</p>
+            <h3>{{ total_members }}</h3>
+            <div class="metric-subtext">
+                <span class="badge badge-blue">{{ total_males }} Male</span>
+                <span class="badge badge-gold">{{ total_females }} Female</span>
+            </div>
+        </div>
+        <div class="metric-icon icon-blue">
+            <i class="bi bi-people-fill"></i>
+        </div>
+    </div>
+
+    <!-- Recent Sunday Attendance -->
+    <div class="metric-card">
+        <div class="metric-info">
+            <p>Latest Sunday Attendance</p>
+            <h3>{{ latest_att_count }}</h3>
+            <div class="metric-subtext">
+                Service: {{ latest_sunday.strftime('%d %b %Y') }}
+            </div>
+        </div>
+        <div class="metric-icon icon-green">
+            <i class="bi bi-check2-circle"></i>
+        </div>
+    </div>
+
+    <!-- Upcoming Birthdays (7 Days) -->
+    <div class="metric-card">
+        <div class="metric-info">
+            <p>Birthdays (Next 7 Days)</p>
+            <h3>{{ upcoming_birthdays|length }}</h3>
+            <div class="metric-subtext">
+                <a href="{{ url_for('notifications.index') }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">View Celebrants &rarr;</a>
+            </div>
+        </div>
+        <div class="metric-icon icon-gold">
+            <i class="bi bi-cake2-fill"></i>
+        </div>
+    </div>
+
+    <!-- Retention Absentees -->
+    <div class="metric-card">
+        <div class="metric-info">
+            <p>Missed 2-3+ Sundays</p>
+            <h3>{{ absentees_summary.total_absentees }}</h3>
+            <div class="metric-subtext">
+                <span class="badge badge-danger">{{ absentees_summary.streak_3_plus }} Urgent (3+ wks)</span>
+                <span class="badge badge-warning">{{ absentees_summary.streak_2 }} (2 wks)</span>
+            </div>
+        </div>
+        <div class="metric-icon icon-red">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+    </div>
+</div>
+
+<!-- ANALYTICS CHARTS ROW -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 28px;">
+    <!-- Attendance Trend Chart -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-graph-up-arrow" style="color: #2563eb;"></i>
+                Sunday Attendance Trends (Last 6 Weeks)
+            </div>
+            <a href="{{ url_for('attendance.history') }}" class="btn btn-outline btn-sm">View Full History</a>
+        </div>
+        <div class="card-body" style="height: 310px;">
+            <canvas id="attendanceTrendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Department Distribution Donut -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-pie-chart-fill" style="color: #f59e0b;"></i>
+                Ministry Units
+            </div>
+        </div>
+        <div class="card-body" style="height: 310px;">
+            <canvas id="departmentChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- TABLES ROW: BIRTHDAYS & ABSENTEES -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <!-- Upcoming Birthdays Widget -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-gift-fill" style="color: #d97706;"></i>
+                Birthdays in the Next 7 Days
+            </div>
+            <form action="{{ url_for('notifications.send_birthday_digest') }}" method="POST" style="margin: 0;">
+                <input type="hidden" name="days_ahead" value="7">
+                <button type="submit" class="btn btn-outline btn-sm" title="Dispatches email alert to church email">
+                    <i class="bi bi-envelope-arrow-up"></i> Email Alert
+                </button>
+            </form>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if upcoming_birthdays %}
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Date</th>
+                            <th>Contact</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in upcoming_birthdays %}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 700; color: #0f172a;">{{ item.member.display_title_name }}</div>
+                                <div style="font-size: 11.5px; color: #64748b;">{{ item.member.department or 'Member' }}</div>
+                            </td>
+                            <td>
+                                {% if item.days_until == 7 %}
+                                    <span class="badge badge-blue">In 7 Days ({{ item.target_date.strftime('%b %d') }})</span>
+                                {% elif item.days_until == 0 %}
+                                    <span class="badge badge-gold">🎉 Today!</span>
+                                {% else %}
+                                    <span class="badge badge-gold">In {{ item.days_until }} days ({{ item.target_date.strftime('%b %d') }})</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.member.phone %}
+                                    <a href="tel:{{ item.member.phone }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">{{ item.member.phone }}</a>
+                                {% else %}
+                                    <span style="color: #94a3b8;">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if item.member.phone and item.member.phone.startswith('0') %}
+                                    <a href="https://wa.me/234{{ item.member.phone[1:] }}?text=Happy%20Birthday%20in%20advance%20from%20NHGCC%20Oshodi!" target="_blank" class="btn btn-sm" style="background-color: #25D366; color: white; padding: 3px 8px; font-size: 11px;">
+                                        <i class="bi bi-whatsapp"></i> Wish
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+                <i class="bi bi-balloon-heart" style="font-size: 32px; color: #cbd5e1; display: block; margin-bottom: 8px;"></i>
+                No birthdays occurring in the next 7 days.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Consecutive Absentees (Missed 2-3 Sundays) -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-person-x-fill" style="color: #ef4444;"></i>
+                Care Alert: Missed 2-3+ Sundays
+            </div>
+            <a href="{{ url_for('follow_up.index') }}" class="btn btn-outline btn-sm">Follow-up Hub</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if urgent_absentees %}
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Consecutive Missed</th>
+                            <th>Phone</th>
+                            <th class="text-center">Reach Out</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in urgent_absentees %}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 700; color: #0f172a;">{{ item.member.display_title_name }}</div>
+                                <div style="font-size: 11.5px; color: #64748b;">{{ item.member.address or 'Address pending' }}</div>
+                            </td>
+                            <td>
+                                {% if item.streak >= 3 %}
+                                    <span class="badge badge-danger">{{ item.streak }} Sundays in a row</span>
+                                {% else %}
+                                    <span class="badge badge-warning">{{ item.streak }} Sundays</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.member.phone %}
+                                    <a href="tel:{{ item.member.phone }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">{{ item.member.phone }}</a>
+                                {% else %}
+                                    <span style="color: #94a3b8;">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if item.member.phone and item.member.phone.startswith('0') %}
+                                    <a href="https://wa.me/234{{ item.member.phone[1:] }}?text=Calvary%20greetings%20from%20NHGCC%20Oshodi!%20We%20missed%20you%20in%20church%20and%20are%20praying%20for%20you." target="_blank" class="btn btn-sm" style="background-color: #25D366; color: white; padding: 3px 8px; font-size: 11px;">
+                                        <i class="bi bi-whatsapp"></i> Chat
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+                <i class="bi bi-shield-check" style="font-size: 32px; color: #10b981; display: block; margin-bottom: 8px;"></i>
+                All active members have attended recently! No consecutive absentees detected.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    const chartLabels = {{ chart_labels|tojson }};
+    const chartData = {{ chart_data|tojson }};
+    const deptLabels = {{ dept_labels|tojson }};
+    const deptCounts = {{ dept_counts|tojson }};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initDashboardCharts(chartLabels, chartData, deptLabels, deptCounts);
+    });
+</script>
+{% endblock %}

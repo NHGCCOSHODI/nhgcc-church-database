@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}System Error • NHGCC Oshodi{% endblock %}
+{% block header_title %}Unexpected Error{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 60px 20px;">
+    <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size: 36px; color: #ef4444;"></i>
+    </div>
+    <h2 style="color: #0b192c; font-size: 24px; margin-bottom: 8px;">An unexpected error occurred</h2>
+    <p style="color: #64748b; font-size: 14px; max-width: 500px; margin: 0 auto 24px;">
+        The system has securely logged this incident. You can safely return to the dashboard or try again.
+    </p>
+    <div>
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary" style="padding: 10px 24px;">
+            <i class="bi bi-house-door-fill" style="margin-right: 6px;"></i> Return to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}{% if member %}Edit Member • {{ member.full_name }}{% else %}Add New Member • NHGCC Oshodi{% endif %}{% endblock %}
+{% block header_title %}{% if member %}Edit Member Profile{% else %}Register New Member{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-person-fill-gear" style="color: #2563eb;"></i>
+                {% if member %}Edit Details: {{ member.full_name }}{% else %}New Member Registration{% endif %}
+            </div>
+            <a href="{{ url_for('members.index') }}" class="btn btn-outline btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to Directory
+            </a>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <!-- Title and Full Name -->
+                <div class="form-row">
+                    <div class="form-group" style="max-width: 200px;">
+                        <label class="form-label">Church Title</label>
+                        <select name="title" class="form-control">
+                            {% for t in ['Member', 'Brother', 'Sister', 'Elder', 'Deacon', 'Deaconess', 'Pastor', 'Evangelist'] %}
+                                <option value="{{ t }}" {% if member and member.title == t %}selected{% endif %}>{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" name="full_name" class="form-control" value="{{ member.full_name if member else '' }}" placeholder="e.g. Victor Onwubali" required>
+                    </div>
+                </div>
+
+                <!-- Phone and Email -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" name="phone" class="form-control" value="{{ member.phone if member else '' }}" placeholder="08012345678">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" name="email" class="form-control" value="{{ member.email if member else '' }}" placeholder="member@gmail.com">
+                    </div>
+                </div>
+
+                <!-- Gender and Birthday -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <select name="gender" class="form-control">
+                            <option value="Male" {% if member and member.gender == 'Male' %}selected{% endif %}>Male</option>
+                            <option value="Female" {% if member and member.gender == 'Female' %}selected{% endif %}>Female</option>
+                            <option value="Not Specified" {% if member and member.gender == 'Not Specified' %}selected{% endif %}>Not Specified</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth (For 7-day birthday alerts)</label>
+                        <input type="date" name="date_of_birth" class="form-control" value="{{ member.date_of_birth.strftime('%Y-%m-%d') if member and member.date_of_birth else '' }}">
+                    </div>
+                </div>
+
+                <!-- Department and Status -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Ministry Unit / Department</label>
+                        <select name="department" class="form-control">
+                            {% for d in ['Congregation', 'Choir', 'Ushering', 'Protocol', 'Media & Tech', 'Sanctuary Keepers', 'Children Church', 'Prayer Band', 'Follow-Up & Welfare', 'Men of Valour', 'Good Women', 'Youth Fellowship'] %}
+                                <option value="{{ d }}" {% if member and member.department == d %}selected{% endif %}>{{ d }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Membership Status</label>
+                        <select name="status" class="form-control">
+                            {% for s in ['Active', 'First-Timer', 'New Convert', 'Inactive'] %}
+                                <option value="{{ s }}" {% if member and member.status == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Residential Address -->
+                <div class="form-group">
+                    <label class="form-label">Residential / House Address</label>
+                    <textarea name="address" class="form-control" rows="2" placeholder="e.g. No 11, Rufai Street, Shomolu, Lagos">{{ member.address if member else '' }}</textarea>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group">
+                    <label class="form-label">Pastoral Notes / Prayer Requests</label>
+                    <textarea name="notes" class="form-control" rows="2" placeholder="Any special pastoral notes or details...">{{ member.notes if member else '' }}</textarea>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+                    {% if member %}
+                        <button type="button" class="btn btn-outline" style="color: #ef4444; border-color: #fecdd3;" onclick="if(confirm('Are you sure you want to remove this member?')) document.getElementById('deleteMemberForm').submit();">
+                            <i class="bi bi-trash"></i> Delete Member
+                        </button>
+                    {% else %}
+                        <div></div>
+                    {% endif %}
+
+                    <div style="display: flex; gap: 12px;">
+                        <a href="{{ url_for('members.index') }}" class="btn btn-outline">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> {% if member %}Save Changes{% else %}Create Member{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            {% if member %}
+            <form id="deleteMemberForm" action="{{ url_for('members.delete', member_id=member.id) }}" method="POST" style="display: none;"></form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

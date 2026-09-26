@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings • NHGCC Oshodi{% endblock %}
+{% block header_title %}Church System & Email Settings{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <!-- CHURCH PROFILE & EMAIL DISPATCH SETTINGS -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-gear-fill" style="color: #2563eb;"></i>
+                <span>Church Configuration & SMTP Credentials</span>
+            </div>
+            <span class="badge badge-blue">{{ db_type }}</span>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <h4 style="font-size: 14px; font-weight: 700; color: #0b192c; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                    1. Church Information
+                </h4>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Church Name</label>
+                        <input type="text" name="church_name" class="form-control" value="{{ smtp_cfg.church_name }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Parish / Branch</label>
+                        <input type="text" name="church_branch" class="form-control" value="{{ smtp_cfg.church_branch }}" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Church Alert Recipient Email (Receives Birthday & Absentee Alerts)</label>
+                        <input type="email" name="church_email" class="form-control" value="{{ smtp_cfg.recipient }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Church Secretariat Phone</label>
+                        <input type="text" name="church_phone" class="form-control" value="+2348034540716">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="form-label"><i class="bi bi-facebook" style="color: #1877f2;"></i> Official Church Facebook Page</label>
+                    <input type="url" name="church_facebook" class="form-control" value="{{ smtp_cfg.facebook }}" placeholder="https://www.facebook.com/nhgccoshodii/">
+                </div>
+
+                <h4 style="font-size: 14px; font-weight: 700; color: #0b192c; text-transform: uppercase; letter-spacing: 0.5px; margin: 24px 0 16px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                    2. Outgoing Email (SMTP) Configuration
+                </h4>
+                <p style="font-size: 12.5px; color: #64748b; margin-bottom: 16px;">
+                    To enable live email delivery to <strong>{{ smtp_cfg.recipient }}</strong>, enter your SMTP server details. If left blank, the app safely operates in simulation mode (logging all emails on-screen).
+                </p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">SMTP Host / Server</label>
+                        <input type="text" name="smtp_server" class="form-control" value="{{ smtp_cfg.server }}" placeholder="e.g. smtp.gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">SMTP Port</label>
+                        <input type="number" name="smtp_port" class="form-control" value="{{ smtp_cfg.port }}" placeholder="587">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Use TLS</label>
+                        <select name="smtp_use_tls" class="form-control">
+                            <option value="True" {% if smtp_cfg.use_tls %}selected{% endif %}>Yes (STARTTLS - Recommended for Port 587)</option>
+                            <option value="False" {% if not smtp_cfg.use_tls %}selected{% endif %}>No (SSL or Plain)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Default From / Sender Name</label>
+                        <input type="text" name="mail_sender" class="form-control" value="{{ smtp_cfg.sender }}" placeholder="NHGCC Oshodi Secretariat <email@domain.com>">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">SMTP Username (Email)</label>
+                        <input type="text" name="smtp_username" class="form-control" value="{{ smtp_cfg.username }}" placeholder="your-email@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">SMTP Password / App Password</label>
+                        <input type="password" name="smtp_password" class="form-control" placeholder="•••••••••••••••• (Leave blank to keep unchanged)">
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save-fill"></i> Save Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TEST EMAIL CARD -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-send-check-fill" style="color: #10b981;"></i>
+                <span>Test Email Delivery</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+                Dispatch a test message to verify that your email server and church inbox are functioning properly.
+            </p>
+            <form action="{{ url_for('settings.test_email') }}" method="POST" style="display: flex; gap: 12px; align-items: flex-end;">
+                <div class="form-group" style="flex-grow: 1; margin-bottom: 0;">
+                    <label class="form-label">Recipient Email</label>
+                    <input type="email" name="test_email" class="form-control" value="{{ smtp_cfg.recipient }}" required>
+                </div>
+                <button type="submit" class="btn btn-accent" style="padding: 10px 20px;">
+                    <i class="bi bi-send"></i> Send Test Email
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- DATABASE TOOLS: RE-IMPORT PDF & BACKUP -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-database-fill-gear" style="color: #d97706;"></i>
+                <span>Database Maintenance & Backup</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 700; color: #0b192c;">Download Local Database Backup</h4>
+                    <p style="font-size: 12.5px; color: #64748b;">
+                        Downloads a full copy of the church SQLite database file (<code>nhgcc_church.db</code>).
+                    </p>
+                </div>
+                <a href="{{ url_for('settings.backup_db') }}" class="btn btn-outline">
+                    <i class="bi bi-cloud-arrow-down-fill"></i> Download Backup (.db)
+                </a>
+            </div>
+
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 700; color: #0b192c;">Re-Sync Members from Original PDF</h4>
+                    <p style="font-size: 12.5px; color: #64748b;">
+                        Re-scans <code>NHGCC database .pdf</code> and imports any missing members into the database.
+                    </p>
+                </div>
+                <form action="{{ url_for('settings.reimport_pdf') }}" method="POST" style="margin: 0;">
+                    <button type="submit" class="btn btn-outline" onclick="return confirm('Do you wish to re-scan and sync the PDF records?');">
+                        <i class="bi bi-arrow-repeat"></i> Re-Sync PDF Data
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

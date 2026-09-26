@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Notification Center • NHGCC Oshodi{% endblock %}
+{% block header_title %}Church Notification & Email Hub{% endblock %}
+
+{% block content %}
+<!-- NOTIFICATION CONTROLS -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px;">
+    <!-- 7-Day Birthday Alert Card -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header" style="background: linear-gradient(135deg, #fef3c7 0%, #ffffff 100%);">
+            <div class="card-title" style="color: #b45309;">
+                <i class="bi bi-cake2-fill" style="color: #d97706;"></i>
+                7-Day Birthday Alert Engine
+            </div>
+            <span class="badge badge-gold">{{ upcoming_birthdays|length }} in next 7 days</span>
+        </div>
+        <div class="card-body">
+            <p style="font-size: 13px; color: #475569; margin-bottom: 16px;">
+                The system automatically checks daily for members whose birthdays occur <strong>7 days from today</strong> and sends a congratulatory digest to the church email address (<strong>{{ smtp_cfg.recipient }}</strong>).
+            </p>
+
+            <form action="{{ url_for('notifications.send_birthday_digest') }}" method="POST">
+                <input type="hidden" name="days_ahead" value="7">
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                    <i class="bi bi-send-fill"></i> Dispatch Birthday Digest to Church Email Now
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2-3 Week Absentee Retention Card -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header" style="background: linear-gradient(135deg, #fee2e2 0%, #ffffff 100%);">
+            <div class="card-title" style="color: #991b1b;">
+                <i class="bi bi-heart-pulse-fill" style="color: #ef4444;"></i>
+                2–3 Week Absentee Alert Engine
+            </div>
+            <span class="badge badge-danger">{{ absentees_summary.total_absentees }} Absentees</span>
+        </div>
+        <div class="card-body">
+            <p style="font-size: 13px; color: #475569; margin-bottom: 16px;">
+                Sends an automated retention email identifying members who have missed church for <strong>2 or 3 consecutive Sundays</strong>, with phone numbers and home addresses for follow-up.
+            </p>
+
+            <form action="{{ url_for('follow_up.send_email_report') }}" method="POST">
+                <button type="submit" class="btn btn-accent" style="width: 100%; justify-content: center;">
+                    <i class="bi bi-send-fill"></i> Dispatch Absentee Report to Church Email Now
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- UPCOMING BIRTHDAYS LIST (NEXT 7 DAYS) -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="bi bi-balloon-heart-fill" style="color: #d97706;"></i>
+            <span>Celebrants Coming Up (Next 7 Days)</span>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if upcoming_birthdays %}
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Celebrant</th>
+                        <th>Birthday Date</th>
+                        <th>Days Away</th>
+                        <th>Phone Contact</th>
+                        <th>Email Address</th>
+                        <th class="text-center">Pastoral Wish</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in upcoming_birthdays %}
+                    {% set m = item.member %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 700; color: #0f172a; font-size: 14px;">
+                                <a href="{{ url_for('members.profile', member_id=m.id) }}" style="color: inherit; text-decoration: none;">
+                                    {{ m.display_title_name }}
+                                </a>
+                            </div>
+                            <div style="font-size: 11.5px; color: #64748b;">{{ m.department or 'Member' }} • {{ m.member_code }}</div>
+                        </td>
+                        <td style="font-weight: 600; color: #1e293b;">
+                            🎂 {{ item.formatted_date }}
+                        </td>
+                        <td>
+                            {% if item.days_until == 7 %}
+                                <span class="badge badge-blue" style="font-size: 12px; padding: 4px 10px;">Exactly 7 Days Away</span>
+                            {% elif item.days_until == 0 %}
+                                <span class="badge badge-gold" style="font-size: 12px; padding: 4px 10px;">🎉 Today!</span>
+                            {% else %}
+                                <span class="badge badge-gold" style="font-size: 12px; padding: 4px 10px;">In {{ item.days_until }} days</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if m.phone %}
+                                <a href="tel:{{ m.phone }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">{{ m.phone }}</a>
+                            {% else %}
+                                <span style="color: #94a3b8;">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 13px; color: #475569;">{{ m.email or '—' }}</td>
+                        <td class="text-center">
+                            {% if m.phone and m.phone.startswith('0') %}
+                                <a href="https://wa.me/234{{ m.phone[1:] }}?text=Happy%20Birthday%20in%20advance%20beloved%20{{ m.first_name }}!%20Grace%20and%20peace%20be%20multiplied%20unto%20you%20from%20NHGCC%20Oshodi." target="_blank" class="btn btn-sm" style="background-color: #25D366; color: white; padding: 4px 10px; font-size: 12px;">
+                                    <i class="bi bi-whatsapp"></i> WhatsApp Wish
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+            <i class="bi bi-balloon" style="font-size: 32px; color: #cbd5e1; display: block; margin-bottom: 6px;"></i>
+            No birthdays scheduled for the upcoming 7 days.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- EMAIL DISPATCH LOGS -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="bi bi-clock-history" style="color: #2563eb;"></i>
+            <span>Sent Notification History</span>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if logs %}
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Type</th>
+                        <th>Subject</th>
+                        <th>Recipient</th>
+                        <th>Status</th>
+                        <th class="text-center">Preview</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td style="font-size: 12.5px; color: #64748b;">{{ log.created_at.strftime('%d %b %Y %H:%M') }}</td>
+                        <td>
+                            {% if log.notification_type == 'BIRTHDAY_7_DAYS' %}
+                                <span class="badge badge-gold">Birthday 7-Day</span>
+                            {% elif log.notification_type == 'ABSENTEE_2_3_WEEKS' %}
+                                <span class="badge badge-danger">Absentee Alert</span>
+                            {% else %}
+                                <span class="badge badge-gray">{{ log.notification_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-weight: 600; color: #1e293b;">{{ log.subject }}</td>
+                        <td style="font-size: 13px; color: #475569;">{{ log.recipient_email }}</td>
+                        <td>
+                            {% if log.status == 'SENT' %}
+                                <span class="badge badge-success">Sent (Live SMTP)</span>
+                            {% elif log.status == 'SIMULATED' %}
+                                <span class="badge badge-blue">Simulated</span>
+                            {% else %}
+                                <span class="badge badge-danger">Failed</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('notifications.preview_email', log_id=log.id) }}" target="_blank" class="btn btn-outline btn-sm" title="View Full Email HTML">
+                                <i class="bi bi-eye"></i> View HTML
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 30px 20px; color: #64748b; font-size: 13px;">
+            No email notifications logged yet. Click one of the buttons above to generate and send an alert!
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

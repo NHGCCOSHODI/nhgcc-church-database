@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Temporary and log files
+*.log
+server_error.log
+.vercel/
+
+# Executables & build artifacts
+*.exe
+dist/
+build/
+

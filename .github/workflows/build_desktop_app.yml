@@ -1,0 +1,58 @@
+name: Build Windows Desktop App & Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Windows Desktop Executable
+        run: |
+          pyinstaller --noconfirm nhgcc_desktop.spec
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NHGCC_Church_Database_Windows
+          path: dist/NHGCC_Church_Database.exe
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "NHGCC Oshodi Church Database ${{ github.ref_name }}"
+          files: dist/NHGCC_Church_Database.exe
+          draft: false
+          prerelease: false
+          body: |
+            ### ⛪ NHGCC Oshodi Church Management System - Windows Desktop App
+            
+            #### 📥 Installation Instructions:
+            1. Download `NHGCC_Church_Database.exe` below.
+            2. Double-click the file to run the 1-click installer.
+            3. The application will create official shortcuts on your **Desktop** and **Start Menu**.
+            4. Once launched, it connects automatically to the shared central church database so all attendances and member registrations synchronize in real time across all church devices.

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Pastoral Care & Retention • NHGCC Oshodi{% endblock %}
+{% block header_title %}Retention & Absentee Follow-Up Desk{% endblock %}
+
+{% block content %}
+<!-- OVERVIEW ALERT BANNER -->
+<div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; border-radius: var(--radius-lg); padding: 22px 28px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-md);">
+    <div>
+        <span class="badge badge-warning" style="margin-bottom: 8px;">Automated Retention Engine</span>
+        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">
+            🕊️ Consecutive Absentee Alerts (2–3 Weeks In a Row)
+        </h2>
+        <p style="font-size: 13px; color: #94a3b8; max-width: 650px;">
+            Members who missed church for 2 consecutive Sundays require a phone call or WhatsApp message. Members missing 3 or more Sundays are flagged for pastoral care and home visitation.
+        </p>
+    </div>
+    <form action="{{ url_for('follow_up.send_email_report') }}" method="POST" style="margin: 0;">
+        <button type="submit" class="btn btn-accent btn-lg" style="box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);">
+            <i class="bi bi-envelope-fill"></i> Send Email Report to Church
+        </button>
+    </form>
+</div>
+
+<!-- STATS CARDS -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-info">
+            <p>Total Absentees (2+ Weeks)</p>
+            <h3>{{ summary.total_absentees }}</h3>
+            <div class="metric-subtext">Active members needing follow-up</div>
+        </div>
+        <div class="metric-icon icon-blue">
+            <i class="bi bi-people"></i>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-info">
+            <p>Missed 2 Consecutive Sundays</p>
+            <h3>{{ summary.streak_2 }}</h3>
+            <div class="metric-subtext"><span class="badge badge-warning">Phone / WhatsApp Check-in</span></div>
+        </div>
+        <div class="metric-icon icon-gold">
+            <i class="bi bi-telephone-outbound"></i>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-info">
+            <p>Missed 3+ Sundays (Urgent)</p>
+            <h3>{{ summary.streak_3_plus }}</h3>
+            <div class="metric-subtext"><span class="badge badge-danger">Pastoral Home Visit</span></div>
+        </div>
+        <div class="metric-icon icon-red">
+            <i class="bi bi-house-door-fill"></i>
+        </div>
+    </div>
+</div>
+
+<!-- FILTER BAR -->
+<div style="display: flex; gap: 8px; margin-bottom: 18px;">
+    <a href="{{ url_for('follow_up.index', streak='all') }}" class="btn btn-sm {% if streak_filter == 'all' %}btn-primary{% else %}btn-outline{% endif %}">
+        All Absentees ({{ summary.total_absentees }})
+    </a>
+    <a href="{{ url_for('follow_up.index', streak='2') }}" class="btn btn-sm {% if streak_filter == '2' %}btn-primary{% else %}btn-outline{% endif %}">
+        Missed 2 Weeks ({{ summary.streak_2 }})
+    </a>
+    <a href="{{ url_for('follow_up.index', streak='3') }}" class="btn btn-sm {% if streak_filter == '3' %}btn-primary{% else %}btn-outline{% endif %}">
+        Missed 3+ Weeks ({{ summary.streak_3_plus }})
+    </a>
+</div>
+
+<!-- ABSENTEES TABLE -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="bi bi-person-exclamation" style="color: #ef4444;"></i>
+            <span>Members Requiring Pastoral Follow-Up</span>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if absentees %}
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Member Details</th>
+                        <th>Absence Level</th>
+                        <th>Contact Number</th>
+                        <th>Residential Address</th>
+                        <th>Last Attended</th>
+                        <th class="text-center" style="width: 200px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in absentees %}
+                    {% set m = item.member %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 700; color: #0f172a; font-size: 14.5px;">
+                                <a href="{{ url_for('members.profile', member_id=m.id) }}" style="color: inherit; text-decoration: none;">
+                                    {{ m.display_title_name }}
+                                </a>
+                            </div>
+                            <div style="font-size: 11.5px; color: #64748b;">
+                                {{ m.department or 'Congregation' }} • {{ m.member_code }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if item.streak >= 3 %}
+                                <span class="badge badge-danger" style="font-size: 12px; padding: 4px 10px;">
+                                    <i class="bi bi-exclamation-circle-fill"></i> Missed {{ item.streak }} Sundays
+                                </span>
+                            {% else %}
+                                <span class="badge badge-warning" style="font-size: 12px; padding: 4px 10px;">
+                                    Missed {{ item.streak }} Sundays
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if m.phone %}
+                                <div><a href="tel:{{ m.phone }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">{{ m.phone }}</a></div>
+                                {% if m.email %}
+                                    <div style="font-size: 11px; color: #64748b;">{{ m.email }}</div>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: #94a3b8;">No phone recorded</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 13px; color: #334155; max-width: 250px;">
+                            {{ m.address or 'Address not registered' }}
+                        </td>
+                        <td style="font-size: 13px; color: #64748b;">
+                            {% if item.last_attended_date %}
+                                {{ item.last_attended_date.strftime('%d %b %Y') }}
+                            {% else %}
+                                <span style="color: #94a3b8;">No record</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div style="display: flex; gap: 6px; justify-content: center;">
+                                {% if m.phone and m.phone.startswith('0') %}
+                                    <a href="https://wa.me/234{{ m.phone[1:] }}?text=Calvary%20greetings%20brother%2Fsister%20{{ m.first_name }}%20from%20NHGCC%20Oshodi!%20We%20missed%20your%20presence%20in%20church%20and%20are%20praying%20for%20you." target="_blank" class="btn btn-sm" style="background-color: #25D366; color: white; padding: 4px 8px; font-size: 11px;" title="Send WhatsApp Message">
+                                        <i class="bi bi-whatsapp"></i> Chat
+                                    </a>
+                                {% endif %}
+                                <button type="button" class="btn btn-primary btn-sm btn-open-log" style="padding: 4px 10px; font-size: 11px;" data-id="{{ m.id }}" data-name="{{ m.full_name }}" data-streak="{{ item.streak }}">
+                                    <i class="bi bi-journal-plus"></i> Log Note
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 50px 20px; color: #64748b;">
+            <i class="bi bi-check2-all" style="font-size: 36px; color: #10b981; display: block; margin-bottom: 8px;"></i>
+            <h3>No members currently meeting the absentee criteria</h3>
+            <p style="font-size: 13px; margin-top: 4px;">Praise God! All active members have attended recently or no 2-3 week streaks detected.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- LOG FOLLOW-UP MODAL -->
+<div class="modal-backdrop" id="logFollowUpModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="card-title">
+                <i class="bi bi-journal-check" style="color: #2563eb;"></i>
+                Record Pastoral Contact Note
+            </div>
+            <button type="button" onclick="closeLogModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b;">&times;</button>
+        </div>
+        <form action="{{ url_for('follow_up.log_follow_up') }}" method="POST">
+            <div class="modal-body">
+                <input type="hidden" name="member_id" id="modalMemberId">
+                <input type="hidden" name="absence_streak" id="modalAbsenceStreak">
+
+                <div class="form-group">
+                    <label class="form-label">Member</label>
+                    <input type="text" id="modalMemberName" class="form-control" readonly style="background-color: #f1f5f9; font-weight: 700;">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Contact Method</label>
+                        <select name="contact_type" class="form-control">
+                            <option value="Phone Call">Phone Call</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Home Visit">Home Visit</option>
+                            <option value="Email">Email</option>
+                            <option value="In-Person">In-Person</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Outcome / Response</label>
+                        <select name="outcome" class="form-control">
+                            <option value="Reached - Returning Next Sunday">Reached - Returning Next Sunday</option>
+                            <option value="Traveled / Out of Town">Traveled / Out of Town</option>
+                            <option value="Sick - Requested Prayer">Sick - Requested Prayer</option>
+                            <option value="Relocated / Moved Away">Relocated / Moved Away</option>
+                            <option value="Not Reachable / No Answer">Not Reachable / No Answer</option>
+                            <option value="Followed Up">Followed Up</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Pastoral Follow-Up Notes</label>
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Briefly describe what was discussed, prayer points, or next steps..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contacted By</label>
+                    <input type="text" name="contacted_by" class="form-control" value="Pastoral Care Team">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeLogModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Follow-Up Note</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-open-log').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const name = this.getAttribute('data-name');
+                const streak = this.getAttribute('data-streak');
+                openLogModal(id, name, streak);
+            });
+        });
+    });
+
+    function openLogModal(id, name, streak) {
+        document.getElementById('modalMemberId').value = id;
+        document.getElementById('modalMemberName').value = name;
+        document.getElementById('modalAbsenceStreak').value = streak;
+        const modal = document.getElementById('logFollowUpModal');
+        modal.classList.add('active');
+    }
+
+    function closeLogModal() {
+        const modal = document.getElementById('logFollowUpModal');
+        modal.classList.remove('active');
+    }
+
+    // Backdrop click close
+    document.getElementById('logFollowUpModal').addEventListener('click', function(e) {
+        if (e.target === this) closeLogModal();
+    });
+</script>
+{% endblock %}
