@@ -297,16 +297,18 @@ def history():
 
 @attendance_bp.route('/export')
 def export_excel():
-    """Exports a clean Excel sheet of attendance for a given Sunday."""
+    """Exports a clean Excel register of Present attendees, Absent members, or both."""
     date_str = request.args.get('date')
     service_type = request.args.get('service_type', 'Sunday Service')
+    scope = request.args.get('scope', 'both').lower()  # 'both', 'present', or 'absent'
 
     try:
         service_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except Exception:
         service_date = get_latest_sunday()
 
-    attendances = (
+    # 1. Present attendees
+    present_attendances = (
         Attendance.query.filter_by(
             service_date=service_date,
             service_type=service_type,
@@ -316,55 +318,213 @@ def export_excel():
         .order_by(Member.full_name)
         .all()
     )
+    present_ids = {a.member_id: a for a in present_attendances}
+
+    # 2. All active members & absent list
+    all_members = Member.query.filter_by(is_active=True).order_by(Member.full_name).all()
+    absent_members = [m for m in all_members if m.id not in present_ids]
+
+    # Query last attended date for absent members
+    prior_attendances = (
+        Attendance.query.filter(
+            Attendance.service_date < service_date,
+            Attendance.status == 'Present'
+        )
+        .order_by(Attendance.service_date.desc())
+        .all()
+    )
+    last_attended_map = {}
+    for a in prior_attendances:
+        if a.member_id not in last_attended_map:
+            last_attended_map[a.member_id] = a.service_date
+
+    thin_side = Side(border_style="thin", color="CBD5E1")
+    cell_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
 
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = f"Attendance {service_date.strftime('%d-%b-%Y')}"
 
-    title_font = Font(name='Segoe UI', size=15, bold=True, color='1E3E62')
-    ws.append(['NHGCC OSHODI - ATTENDANCE REGISTER'])
-    ws.append([f"Service: {service_type} | Date: {service_date.strftime('%A, %d %B %Y')} | Total Present: {len(attendances)}"])
-    ws.append([])
+    # ----------------- TAB: PRESENT ATTENDEES -----------------
+    def build_present_sheet(ws):
+        ws.title = f"Present ({len(present_attendances)})"
+        ws.views.sheetView[0].showGridLines = True
+        ws.append(["NHGCC OSHODI • ATTENDANCE REGISTER (PRESENT)"])
+        ws.append([f"Service: {service_type} | Date: {service_date.strftime('%A, %d %B %Y')} | Total Present: {len(present_attendances)}"])
+        ws.append([])
 
-    ws['A1'].font = title_font
-    ws['A2'].font = Font(name='Segoe UI', size=11, italic=True)
+        ws['A1'].font = Font(name='Segoe UI', size=15, bold=True, color='065F46')
+        ws['A2'].font = Font(name='Segoe UI', size=10.5, italic=True)
 
-    headers = ['S/N', 'Member Code', 'Full Name', 'Gender', 'Phone Number', 'Email', 'Department', 'Status', 'Check-in Time']
-    ws.append(headers)
+        headers = ['S/N', 'Member Code', 'Full Name', 'Gender', 'Phone Number', 'Email', 'Department', 'Member Status', 'Check-In Time']
+        ws.append(headers)
 
-    header_fill = PatternFill(start_color='0B192C', end_color='0B192C', fill_type='solid')
-    header_font = Font(name='Segoe UI', size=11, bold=True, color='FFFFFF')
+        header_fill = PatternFill(start_color='065F46', end_color='065F46', fill_type='solid')
+        header_font = Font(name='Segoe UI', size=10.5, bold=True, color='FFFFFF')
 
-    for col_idx in range(1, len(headers) + 1):
-        cell = ws.cell(row=4, column=col_idx)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal='center' if col_idx in (1, 2, 4, 8, 9) else 'left')
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=4, column=col_idx)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center' if col_idx in (1, 2, 4, 8, 9) else 'left')
+            cell.border = cell_border
 
-    for idx, a in enumerate(attendances, 1):
-        m = a.member
-        ws.append([
-            idx,
-            m.member_code or '',
-            m.display_title_name,
-            m.gender,
-            m.phone,
-            m.email,
-            m.department,
-            m.status,
-            a.check_in_time.strftime('%I:%M %p') if a.check_in_time else 'Present'
-        ])
+        for idx, a in enumerate(present_attendances, 1):
+            m = a.member
+            check_time_str = a.check_in_time.strftime('%I:%M %p') if a.check_in_time else 'Present'
+            row_vals = [
+                idx,
+                m.member_code or f"NHGCC-{m.id:04d}",
+                m.display_title_name,
+                m.gender or 'Not Specified',
+                m.phone or '—',
+                m.email or '—',
+                m.department or 'Congregation',
+                m.status or 'Active',
+                check_time_str
+            ]
+            ws.append(row_vals)
+            row_idx = idx + 4
+            for col_idx in range(1, len(row_vals) + 1):
+                c = ws.cell(row=row_idx, column=col_idx)
+                c.border = cell_border
+                c.font = Font(name='Segoe UI', size=10)
+                if idx % 2 == 0:
+                    c.fill = PatternFill(start_color='F0FDF4', end_color='F0FDF4', fill_type='solid')
+                if col_idx in (1, 2, 4, 8, 9):
+                    c.alignment = Alignment(horizontal='center')
 
-    for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = openpyxl.utils.get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = openpyxl.utils.get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    # ----------------- TAB: ABSENT MEMBERS -----------------
+    def build_absent_sheet(ws):
+        ws.title = f"Absent ({len(absent_members)})"
+        ws.views.sheetView[0].showGridLines = True
+        ws.append(["NHGCC OSHODI • LIST OF MEMBERS WHO WERE ABSENT"])
+        ws.append([f"Service: {service_type} | Date: {service_date.strftime('%A, %d %B %Y')} | Total Absent: {len(absent_members)}"])
+        ws.append([])
+
+        ws['A1'].font = Font(name='Segoe UI', size=15, bold=True, color='991B1B')
+        ws['A2'].font = Font(name='Segoe UI', size=10.5, italic=True)
+
+        headers = ['S/N', 'Member Code', 'Full Name', 'Gender', 'Phone Number', 'Email', 'Department', 'Member Status', 'Last Attended Date', 'Follow-up Status']
+        ws.append(headers)
+
+        header_fill = PatternFill(start_color='991B1B', end_color='991B1B', fill_type='solid')
+        header_font = Font(name='Segoe UI', size=10.5, bold=True, color='FFFFFF')
+
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=4, column=col_idx)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center' if col_idx in (1, 2, 4, 8, 9, 10) else 'left')
+            cell.border = cell_border
+
+        for idx, m in enumerate(absent_members, 1):
+            last_dt = last_attended_map.get(m.id)
+            last_dt_str = last_dt.strftime('%d-%b-%Y') if last_dt else 'No Prior Attendance'
+            row_vals = [
+                idx,
+                m.member_code or f"NHGCC-{m.id:04d}",
+                m.display_title_name,
+                m.gender or 'Not Specified',
+                m.phone or '—',
+                m.email or '—',
+                m.department or 'Congregation',
+                m.status or 'Active',
+                last_dt_str,
+                'Needs Follow-Up'
+            ]
+            ws.append(row_vals)
+            row_idx = idx + 4
+            for col_idx in range(1, len(row_vals) + 1):
+                c = ws.cell(row=row_idx, column=col_idx)
+                c.border = cell_border
+                c.font = Font(name='Segoe UI', size=10)
+                if idx % 2 == 0:
+                    c.fill = PatternFill(start_color='FEF2F2', end_color='FEF2F2', fill_type='solid')
+                if col_idx in (1, 2, 4, 8, 9, 10):
+                    c.alignment = Alignment(horizontal='center')
+
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = openpyxl.utils.get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    # ----------------- TAB: SUMMARY -----------------
+    def build_summary_sheet(ws):
+        ws.title = "Executive Summary"
+        ws.views.sheetView[0].showGridLines = True
+        ws.append(["NATIONAL HOLY GHOST CHURCH OF CHRIST (NHGCC) OSHODI"])
+        ws.append([f"SUNDAY ATTENDANCE & ABSENTEE REGISTER • {service_date.strftime('%d %B %Y').upper()}"])
+        ws.append([])
+
+        ws['A1'].font = Font(name='Segoe UI', size=16, bold=True, color='0B192C')
+        ws['A2'].font = Font(name='Segoe UI', size=11, bold=True, color='D97706')
+
+        ws.append(["METRIC", "VALUE", "NOTES"])
+        for col in range(1, 4):
+            c = ws.cell(row=4, column=col)
+            c.fill = PatternFill(start_color='0B192C', end_color='0B192C', fill_type='solid')
+            c.font = Font(name='Segoe UI', size=11, bold=True, color='FFFFFF')
+            c.alignment = Alignment(horizontal='center' if col == 2 else 'left')
+
+        summary_rows = [
+            ("Service Date", service_date.strftime('%A, %d %B %Y'), "Official Sunday Service"),
+            ("Service Type", service_type, "Entrance Desk Recording"),
+            ("Total Registered Parish Members", len(all_members), "Active database membership"),
+            ("Members Present (Who Came)", len(present_attendances), f"{len(present_attendances)/len(all_members)*100:.1f}% Attendance Rate" if all_members else "0%"),
+            ("Members Absent (Who Missed)", len(absent_members), f"{len(absent_members)/len(all_members)*100:.1f}% Absence Rate" if all_members else "0%"),
+            ("Male Attendees Present", sum(1 for a in present_attendances if a.member.gender == 'Male'), ""),
+            ("Female Attendees Present", sum(1 for a in present_attendances if a.member.gender == 'Female'), ""),
+            ("Unspecified Gender", sum(1 for a in present_attendances if a.member.gender not in ('Male', 'Female')), "")
+        ]
+
+        for idx, (label, val, note) in enumerate(summary_rows, 5):
+            ws.append([label, val, note])
+            for col in range(1, 4):
+                cell = ws.cell(row=idx, column=col)
+                cell.border = cell_border
+                cell.font = Font(name='Segoe UI', size=10, bold=(col == 2))
+                if col == 2:
+                    cell.alignment = Alignment(horizontal='center')
+                    if label == "Members Present (Who Came)":
+                        cell.fill = PatternFill(start_color='D1FAE5', end_color='D1FAE5', fill_type='solid')
+                        cell.font = Font(name='Segoe UI', size=11, bold=True, color='065F46')
+                    elif label == "Members Absent (Who Missed)":
+                        cell.fill = PatternFill(start_color='FEE2E2', end_color='FEE2E2', fill_type='solid')
+                        cell.font = Font(name='Segoe UI', size=11, bold=True, color='991B1B')
+
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = openpyxl.utils.get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    date_stamp = service_date.strftime('%Y%m%d')
+
+    if scope == 'present':
+        ws = wb.active
+        build_present_sheet(ws)
+        filename = f"NHGCC_Present_Attendees_{date_stamp}.xlsx"
+    elif scope == 'absent':
+        ws = wb.active
+        build_absent_sheet(ws)
+        filename = f"NHGCC_Absent_Members_{date_stamp}.xlsx"
+    else:
+        # Default: Full combined workbook with Summary, Present, and Absent tabs
+        ws_sum = wb.active
+        build_summary_sheet(ws_sum)
+        ws_pres = wb.create_sheet()
+        build_present_sheet(ws_pres)
+        ws_abs = wb.create_sheet()
+        build_absent_sheet(ws_abs)
+        filename = f"NHGCC_Attendance_Register_Full_{date_stamp}.xlsx"
 
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
 
-    filename = f"NHGCC_Attendance_{service_date.strftime('%Y%m%d')}_{service_type.replace(' ', '_')}.xlsx"
     return send_file(
         output,
         as_attachment=True,
