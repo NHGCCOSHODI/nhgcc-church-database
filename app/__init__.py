@@ -36,7 +36,7 @@ def create_app(config_class=Config):
         try:
             from sqlalchemy import create_engine, text
             from sqlalchemy.pool import NullPool
-            test_engine = create_engine(db_uri, poolclass=NullPool, connect_args={'connect_timeout': 5})
+            test_engine = create_engine(db_uri, poolclass=NullPool, connect_args={'connect_timeout': 5, 'prepare_threshold': None})
             with test_engine.connect() as probe_conn:
                 probe_conn.execute(text('SELECT 1'))
             print('[NHGCC Startup] Connected successfully to Supabase Cloud Database (Live Sync Active).')
@@ -99,6 +99,13 @@ def create_app(config_class=Config):
             init_scheduler(app)
         except Exception as e:
             print(f'[NHGCC Scheduler] Warning: {e}')
+
+        try:
+            from app.services.sync_service import sync_offline_sqlite_to_cloud
+            sync_ok, sync_msg = sync_offline_sqlite_to_cloud(app)
+            print(f'[NHGCC Startup] Offline-Cloud Sync Status: {sync_msg}')
+        except Exception as e:
+            print(f'[NHGCC Startup] Sync notice: {e}')
 
     @app.errorhandler(500)
     def internal_server_error(e):

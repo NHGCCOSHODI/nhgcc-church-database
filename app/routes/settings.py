@@ -104,3 +104,15 @@ def reimport_pdf():
     res = import_pdf_to_database(str(pdf_path), force=True)
     flash(f"PDF sync completed: {res['total']} records processed ({res['added']} added, {res['updated']} updated).", 'success')
     return redirect(url_for('settings.index'))
+
+
+@settings_bp.route('/sync-cloud', methods=['GET', 'POST'])
+def sync_cloud():
+    """Manually triggers bidirectional sync between local SQLite and cloud Supabase."""
+    from app.services.sync_service import sync_offline_sqlite_to_cloud
+    ok, msg = sync_offline_sqlite_to_cloud(current_app)
+    if ok:
+        flash(f'Cloud Synchronization Complete: {msg}', 'success')
+    else:
+        flash(f'Sync Warning: {msg}', 'warning')
+    return redirect(url_for('settings.index'))

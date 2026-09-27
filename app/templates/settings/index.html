@@ -123,6 +123,30 @@
         </div>
     </div>
 
+    <!-- CLOUD & OFFLINE SYNCHRONIZATION -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="bi bi-cloud-arrow-up-fill" style="color: #10b981;"></i>
+                <span>Cloud & Offline Multi-Device Synchronization</span>
+            </div>
+            <span class="badge badge-green"><i class="bi bi-check-circle-fill"></i> Multi-Device Sync Active</span>
+        </div>
+        <div class="card-body">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 700; color: #0b192c;">Two-Way Cloud Synchronization</h4>
+                    <p style="font-size: 12.5px; color: #64748b; margin-top: 4px;">
+                        Pushes any offline Sunday attendance entries and new member profiles directly to the central Supabase database so all church laptops stay synchronized.
+                    </p>
+                </div>
+                <a href="{{ url_for('settings.sync_cloud') }}" class="btn btn-primary" style="background-color: #10b981; border-color: #10b981;">
+                    <i class="bi bi-arrow-repeat"></i> Sync with Cloud Now
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- DATABASE TOOLS: RE-IMPORT PDF & BACKUP -->
     <div class="card">
         <div class="card-header">

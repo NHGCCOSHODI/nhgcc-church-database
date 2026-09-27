@@ -26,11 +26,14 @@
             </select>
         </div>
 
-        <!-- Quick Register Member Modal Trigger -->
-        <div style="align-self: flex-end;">
+        <!-- Quick Register Member Modal Trigger & Sync -->
+        <div style="align-self: flex-end; display: flex; gap: 8px; flex-wrap: wrap;">
             <button id="openQuickAddBtn" class="btn btn-accent btn-lg">
                 <i class="bi bi-person-plus-fill"></i> + Quick Register Member
             </button>
+            <a href="{{ url_for('settings.sync_cloud') }}" class="btn btn-outline" style="color: #ffffff; border-color: rgba(255,255,255,0.4);" title="Synchronize offline and cloud records">
+                <i class="bi bi-cloud-arrow-up-fill"></i> Sync Cloud
+            </a>
         </div>
     </div>
 

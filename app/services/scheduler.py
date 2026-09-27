@@ -50,6 +50,14 @@ def trigger_absentee_check(app):
         except Exception as e:
             logger.error(f"Error in automated absentee check: {e}")
 
+def trigger_cloud_sync(app):
+    """Periodically syncs local offline database with cloud database."""
+    try:
+        from app.services.sync_service import sync_offline_sqlite_to_cloud
+        sync_offline_sqlite_to_cloud(app)
+    except Exception as e:
+        logger.warning(f"Error in automated cloud sync job: {e}")
+
 def init_scheduler(app):
     """Initializes APScheduler background jobs if not running in a serverless environment."""
     if os.environ.get('VERCEL') or app.config.get('FLASK_ENV') == 'testing':
@@ -76,6 +84,15 @@ def init_scheduler(app):
                 hour=8,
                 minute=0,
                 id='weekly_absentee_check',
+                replace_existing=True
+            )
+            # Periodic cloud sync every 5 minutes
+            scheduler.add_job(
+                func=trigger_cloud_sync,
+                args=[app],
+                trigger='interval',
+                minutes=5,
+                id='periodic_cloud_sync',
                 replace_existing=True
             )
             scheduler.start()
